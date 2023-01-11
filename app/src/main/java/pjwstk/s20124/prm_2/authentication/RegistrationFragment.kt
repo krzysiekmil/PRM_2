@@ -1,63 +1,105 @@
 package pjwstk.s20124.prm_2.authentication
 
 import android.os.Bundle
+import android.util.Patterns
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.widget.addTextChangedListener
+import com.google.firebase.auth.FirebaseAuth
 import pjwstk.s20124.prm_2.R
+import pjwstk.s20124.prm_2.databinding.FragmentRegistrationBinding
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [RegistrationFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class RegistrationFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+
+    private var _binding: FragmentRegistrationBinding? = null
+    private lateinit var auth: FirebaseAuth
+    private val binding get() = _binding!!
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-
-        activity?.title = getString(R.string.action_register)
-
+        auth = FirebaseAuth.getInstance()
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_registration, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        _binding = FragmentRegistrationBinding.inflate(layoutInflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment RegistrationFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            RegistrationFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        handleInputChanged()
+        handleButton()
+    }
+
+    private fun handleButton() {
+        val username = binding.inputUsername
+        val password = binding.inputPassword
+
+        binding.register.setOnClickListener {
+            auth.createUserWithEmailAndPassword(username.text.trim().toString(), password.text.trim().toString())
+                .addOnCompleteListener {
+                    if(it.isSuccessful){
+                        Toast.makeText(activity, "User created :)", Toast.LENGTH_LONG).show()
+                    }
+                    else {
+                        Toast.makeText(activity, "Something went wrong try again :(", Toast.LENGTH_LONG).show()
+                    }
                 }
-            }
+        }
+    }
+
+    private fun handleInputChanged() {
+        val username = binding.inputUsername
+        val password = binding.inputPassword
+        val repeat = binding.inputRepeatPassword
+
+        username.addTextChangedListener { loginDataChanged() }
+        password.addTextChangedListener { loginDataChanged() }
+        repeat.addTextChangedListener { loginDataChanged() }
+
+    }
+
+    private fun loginDataChanged() {
+        val username = binding.inputUsername
+        val password = binding.inputPassword
+        val repeat = binding.inputRepeatPassword
+
+        val register = binding.register
+        if (!isUserNameValid(username.text.toString())) {
+            binding.inputContainer.error = getString(R.string.invalid_username)
+        } else if (!isPasswordValid(password.text.toString())) {
+            binding.passwordContainer.error = getString(R.string.invalid_password)
+        }
+        else if(!repeat.text.equals(password.text)){
+            binding.passwordContainer.error = getString(R.string.repeat_password_not_same)
+            binding.repeatContainer.error = getString(R.string.repeat_password_not_same)
+        }
+        else {
+            binding.inputContainer.error = null
+            binding.passwordContainer.error = null
+            binding.repeatContainer.error = null
+            register.isEnabled = true
+        }
+    }
+
+    private fun isUserNameValid(username: String): Boolean {
+        return if (username.contains("@")) {
+            Patterns.EMAIL_ADDRESS.matcher(username).matches()
+        } else {
+            username.isNotBlank()
+        }
+    }
+
+    private fun isPasswordValid(password: String): Boolean {
+        return password.isBlank() || password.length > 5
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

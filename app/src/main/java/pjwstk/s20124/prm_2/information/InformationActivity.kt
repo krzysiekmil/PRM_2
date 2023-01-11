@@ -1,12 +1,16 @@
 package pjwstk.s20124.prm_2.information
 
+import android.Manifest
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
-import pjwstk.s20124.prm_2.R
 import pjwstk.s20124.prm_2.authentication.AuthenticationActivity
-import pjwstk.s20124.prm_2.databinding.ActivityAuthenticationBinding
 import pjwstk.s20124.prm_2.databinding.ActivityInformationBinding
 
 class InformationActivity : AppCompatActivity() {
