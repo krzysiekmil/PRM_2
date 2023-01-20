@@ -1,9 +1,9 @@
 package pjwstk.s20124.prm_2
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import pjwstk.s20124.prm_2.authentication.AuthenticationActivity
 import pjwstk.s20124.prm_2.databinding.ActivityMainBinding

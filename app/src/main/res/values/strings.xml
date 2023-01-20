@@ -54,6 +54,7 @@
     <string name="invalid_password">Password must be >5 characters</string>
     <string name="repeat_password_not_same">Repeat password must be equal to password</string>
     <string name="login_failed">"Login failed"</string>
+    <string name="rss_item_image">Rss Item image</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
