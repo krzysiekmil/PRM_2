@@ -19,6 +19,11 @@ class RssViewAdapter(private val listener: RowClickListener): RecyclerView.Adapt
 
     override fun onBindViewHolder(holder: RssViewHolder, position: Int) {
         val item = items[position]
+        holder.itemView.setOnClickListener {listener.onItemClickListener(item)}
+        holder.itemView.setOnLongClickListener {
+            listener.onLongClickListener(item)
+            true
+        }
         holder.bind(item)
     }
 

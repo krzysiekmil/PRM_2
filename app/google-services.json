@@ -2,6 +2,7 @@
   "project_info": {
     "project_number": "52035561856",
     "project_id": "prm-2-2d778",
+    "firebase_url": "https://prm-2-2d778-default-rtdb.europe-west1.firebasedatabase.app",
     "storage_bucket": "prm-2-2d778.appspot.com"
   },
   "client": [

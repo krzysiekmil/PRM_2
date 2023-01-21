@@ -1,37 +1,31 @@
 package pjwstk.s20124.prm_2.information
 
 import android.Manifest
+import android.R
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
-import android.location.Location
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.MapperFeature
-import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
-import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.android.gms.location.*
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.common.io.Resources.getResource
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
-import io.grpc.InternalChannelz.id
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import pjwstk.s20124.prm_2.RssApplication
 import pjwstk.s20124.prm_2.adapter.RowClickListener
 import pjwstk.s20124.prm_2.adapter.RssViewAdapter
@@ -52,12 +46,13 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
     private lateinit var auth: FirebaseAuth
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private var GEO_PERMISSION_REQUEST_CODE = 1
+    private var favouriteMode = false
 
     private lateinit var recyclerViewAdapter: RssViewAdapter
     private lateinit var recyclerView: RecyclerView
 
     private val rssViewModel: RssViewModel by lazy { ViewModelProvider(this, RssViewModelFactory(application as RssApplication))[RssViewModel::class.java] }
-
+    val database = Firebase.database
 
 
 
@@ -69,6 +64,7 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
 
         auth = FirebaseAuth.getInstance()
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
 
         binding.logOutButton.setOnClickListener {
             auth.signOut()
@@ -84,44 +80,34 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         }
 
         rssViewModel.rssItemList.observe(this) {
-            recyclerViewAdapter.items = it
+            if(favouriteMode) {
+                recyclerViewAdapter.items = it.filter { rssItem -> rssItem.favourite }
+            } else {
+                recyclerViewAdapter.items = it
+            }
             recyclerViewAdapter.notifyDataSetChanged()
         }
 
+
         val bottomNavigation = binding.bottomNavigation
 
-        bottomNavigation.setOnNavigationItemReselectedListener { item ->
-            when(item.itemId) {
-                1 -> {
-                    // Respond to navigation item 1 reselection
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when(item.title) {
+               "List" -> {
+                    favouriteMode = false
+                    rssViewModel.fetch()
+                    true
                 }
-                2 -> {
-                    // Respond to navigation item 2 reselection
+                "Favourites" -> {
+                    favouriteMode = true
+                    rssViewModel.fetch()
+                    true
+                }
+                else -> {
+                    false
                 }
             }
         }
-
-
-
-
-//        binding.geo.setOnClickListener {
-//            downloadRSS()
-//            getLastLocation()
-//        }
-    }
-
-    private fun downloadRSS(){
-        val myExecutor = Executors.newSingleThreadExecutor()
-        val myHandler = Handler(Looper.getMainLooper())
-        var rss: RssSchema? = null
-        myExecutor.execute {
-            rss = XmlParser.getInstance()?.parser?.readValue(URL("https://wiadomosci.gazeta.pl/pub/rss/wiadomosci_kraj.htm"), RssSchema::class.java)!!
-            myHandler.post {
-                recyclerViewAdapter.items = rss?.channel?.items as ArrayList<RssItem>
-                recyclerViewAdapter.notifyDataSetChanged()
-            }
-        }
-
     }
 
 
@@ -192,10 +178,21 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
     }
 
     override fun onItemClickListener(item: RssItem) {
-        TODO("Not yet implemented")
+        val intent = Intent(this, DetailsActivity::class.java)
+        intent.putExtra("id", item.id)
+        startActivity(intent)
     }
 
     override fun onLongClickListener(item: RssItem) {
-        TODO("Not yet implemented")
+        val favourite = item.favourite
+        val uuid = item.id
+        val action = if (!favourite) "add to" else "remove from"
+        MaterialAlertDialogBuilder(this)
+            .setMessage("Do you want $action favourites")
+            .setTitle("Favourites changes")
+            .setCancelable(false)
+            .setPositiveButton("Yes") { _: DialogInterface?, _: Int ->  if(!favourite) rssViewModel.addToFavourites(uuid) else rssViewModel.removeFromFavourites(uuid)}
+            .setNegativeButton("No") { dialog: DialogInterface, _: Int -> dialog.cancel() }
+            .create().show()
     }
 }

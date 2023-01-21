@@ -1,6 +1,7 @@
 package pjwstk.s20124.prm_2.adapter
 
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.text.Html
@@ -38,6 +39,11 @@ class RssViewHolder(binding: ListRowBinding): RecyclerView.ViewHolder(binding.ro
         description.text = Html.fromHtml(item.description, HtmlCompat.FROM_HTML_MODE_LEGACY)
             .toString()
             .substring(1)
+
+        if(item.wasRead){
+            title.setTextColor(Color.LTGRAY)
+            description.setTextColor(Color.LTGRAY)
+        }
 
     }
 }
