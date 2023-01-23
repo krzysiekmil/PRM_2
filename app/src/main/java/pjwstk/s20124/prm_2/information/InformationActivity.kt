@@ -4,6 +4,7 @@ import android.Manifest
 import android.R
 import android.annotation.SuppressLint
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
@@ -237,13 +238,18 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
     }
 
     private fun showNotification() {
+        val contentIntent = PendingIntent.getActivity(this, 0, Intent(this, InformationActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT)
+
         val notification = NotificationCompat.Builder(applicationContext, "channel_id")
             .setContentTitle("Rss App")
             .setContentText("Open app to see new info")
             .setSmallIcon(R.mipmap.sym_def_app_icon)
+            .setContentIntent(contentIntent)
             .build()
+
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
         notificationManager.notify(1, notification)
     }
 }
