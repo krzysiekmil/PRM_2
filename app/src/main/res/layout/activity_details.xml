@@ -43,7 +43,7 @@
                     tools:ignore="SpeakableTextPresentCheck" />
 
                 <ImageButton
-                    android:id="@+id/imageButton2"
+                    android:id="@+id/likeButton"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginTop="4dp"
@@ -53,7 +53,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_baseline_favorite_24"
+                    app:srcCompat="@drawable/ic_baseline_favorite_border_24"
                     app:tint="@color/white"
                     tools:ignore="SpeakableTextPresentCheck" />
             </androidx.constraintlayout.widget.ConstraintLayout>

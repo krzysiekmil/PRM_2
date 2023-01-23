@@ -6,6 +6,7 @@ xmlns:tools="http://schemas.android.com/tools">
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 <application
     android:name=".RssApplication"
@@ -52,6 +53,9 @@ xmlns:tools="http://schemas.android.com/tools">
             android:name="android.app.lib_name"
             android:value="" />
     </activity>
-</application>
 
+    <service
+        android:name="pjwstk.s20124.prm_2.service.BackgroundService"
+        android:exported="false"/>
+</application>
 </manifest>

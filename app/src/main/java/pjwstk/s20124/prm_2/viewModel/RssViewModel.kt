@@ -1,5 +1,8 @@
 package pjwstk.s20124.prm_2.viewModel
 
+import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
@@ -15,6 +18,7 @@ class RssViewModel(application: RssApplication) : AndroidViewModel(application) 
     private var auth = FirebaseAuth.getInstance()
     private var rssRepository: RssRepository = application.rssRepository
     val rssItemList = rssRepository.items
+    val notification = rssRepository.notification
 
     fun fetch() {
         val list = rssItemList.value
@@ -71,6 +75,11 @@ class RssViewModel(application: RssApplication) : AndroidViewModel(application) 
 
         }
         rssRepository.items.value = list
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    fun setCurrentCountry(latitude: Double, longitude: Double, context: Context) {
+        rssRepository.setCurrentCountry(latitude,longitude, context)
     }
 
 }

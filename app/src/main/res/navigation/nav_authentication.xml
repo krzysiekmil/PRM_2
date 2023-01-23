@@ -3,13 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_authentication"
+    android:label="@string/action_register"
     app:startDestination="@id/loginFragment">
 
     <fragment
         android:id="@+id/loginFragment"
         android:name="pjwstk.s20124.prm_2.authentication.LoginFragment"
-        android:label="fragment_login"
-        tools:layout="@layout/fragment_login" >
+        android:label="@string/action_sign_in"
+        tools:layout="@layout/fragment_login">
         <action
             android:id="@+id/action_loginFragment_to_registrationFragment"
             app:destination="@id/registrationFragment" />
@@ -18,7 +19,7 @@
         android:id="@+id/registrationFragment"
         android:name="pjwstk.s20124.prm_2.authentication.RegistrationFragment"
         android:label="fragment_registration"
-        tools:layout="@layout/fragment_registration" >
+        tools:layout="@layout/fragment_registration">
         <action
             android:id="@+id/action_registrationFragment_to_loginFragment"
             app:destination="@id/loginFragment" />

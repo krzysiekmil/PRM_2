@@ -3,59 +3,60 @@ package pjwstk.s20124.prm_2.information
 import android.Manifest
 import android.R
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
 import pjwstk.s20124.prm_2.RssApplication
 import pjwstk.s20124.prm_2.adapter.RowClickListener
 import pjwstk.s20124.prm_2.adapter.RssViewAdapter
 import pjwstk.s20124.prm_2.authentication.AuthenticationActivity
 import pjwstk.s20124.prm_2.databinding.ActivityInformationBinding
 import pjwstk.s20124.prm_2.model.RssItem
-import pjwstk.s20124.prm_2.model.RssSchema
-import pjwstk.s20124.prm_2.utils.XmlParser
+import pjwstk.s20124.prm_2.service.BackgroundService
 import pjwstk.s20124.prm_2.viewModel.RssViewModel
 import pjwstk.s20124.prm_2.viewModel.RssViewModelFactory
-import java.net.URL
-import java.util.concurrent.Executors
 
 
 class InformationActivity : AppCompatActivity(), RowClickListener {
 
     private lateinit var binding: ActivityInformationBinding
     private lateinit var auth: FirebaseAuth
+    private var favouriteMode = false
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private var GEO_PERMISSION_REQUEST_CODE = 1
-    private var favouriteMode = false
+    private lateinit var notificationManager: NotificationManager
 
     private lateinit var recyclerViewAdapter: RssViewAdapter
     private lateinit var recyclerView: RecyclerView
 
-    private val rssViewModel: RssViewModel by lazy { ViewModelProvider(this, RssViewModelFactory(application as RssApplication))[RssViewModel::class.java] }
-    val database = Firebase.database
+    private val rssViewModel: RssViewModel by lazy {
+        ViewModelProvider(
+            this,
+            RssViewModelFactory(application as RssApplication)
+        )[RssViewModel::class.java]
+    }
 
 
-
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,14 +64,30 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         setContentView(binding.root)
 
         auth = FirebaseAuth.getInstance()
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        binding.logOutButton.setOnClickListener {
-            auth.signOut()
-            startActivity(Intent(this, AuthenticationActivity::class.java))
+        val hasNotificationPermission =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+
+        if (!hasNotificationPermission) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
 
+        getLastLocation()
+        startService(Intent(this, BackgroundService::class.java))
+
+        initRecyclerViewAdapter()
+        initButtonHandler()
+
+    }
+
+    private fun initRecyclerViewAdapter() {
         recyclerView = binding.recyclerView
 
         recyclerView.apply {
@@ -80,20 +97,31 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         }
 
         rssViewModel.rssItemList.observe(this) {
-            if(favouriteMode) {
+
+            if (favouriteMode) {
                 recyclerViewAdapter.items = it.filter { rssItem -> rssItem.favourite }
             } else {
                 recyclerViewAdapter.items = it
             }
+
             recyclerViewAdapter.notifyDataSetChanged()
         }
 
+        rssViewModel.notification.observe(this) {
+            showNotification()
+        }
+    }
 
-        val bottomNavigation = binding.bottomNavigation
 
-        bottomNavigation.setOnItemSelectedListener { item ->
-            when(item.title) {
-               "List" -> {
+    private fun initButtonHandler() {
+        binding.logOutButton.setOnClickListener {
+            auth.signOut()
+            startActivity(Intent(this, AuthenticationActivity::class.java))
+        }
+
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.title) {
+                "List" -> {
                     favouriteMode = false
                     rssViewModel.fetch()
                     true
@@ -110,7 +138,30 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         }
     }
 
+    override fun onItemClickListener(item: RssItem) {
+        val intent = Intent(this, DetailsActivity::class.java)
+        intent.putExtra("id", item.id)
+        startActivity(intent)
+    }
 
+    override fun onLongClickListener(item: RssItem) {
+        val favourite = item.favourite
+        val uuid = item.id
+        val action = if (!favourite) "add to" else "remove from"
+        MaterialAlertDialogBuilder(this)
+            .setMessage("Do you want $action favourites")
+            .setTitle("Favourites changes")
+            .setCancelable(false)
+            .setPositiveButton("Yes") { _: DialogInterface?, _: Int ->
+                if (!favourite) rssViewModel.addToFavourites(
+                    uuid
+                ) else rssViewModel.removeFromFavourites(uuid)
+            }
+            .setNegativeButton("No") { dialog: DialogInterface, _: Int -> dialog.cancel() }
+            .create().show()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("MissingPermission")
     private fun getLastLocation() {
         if (checkPermissions()) {
@@ -123,14 +174,16 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
                         if (location == null) {
                             requestNewLocationData()
                         } else {
-                            val geocoder = Geocoder(this)
-                            geocoder.getFromLocation(location.latitude, location.longitude, 1)
-
+                            rssViewModel.setCurrentCountry(
+                                location.latitude,
+                                location.longitude,
+                                this
+                            );
                         }
-
                     }
             } else {
-                Toast.makeText(this, "Please turn on" + " your location...", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Please turn on" + " your location...", Toast.LENGTH_LONG)
+                    .show()
                 startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
             }
         } else {
@@ -149,25 +202,31 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         mFusedLocationClient.requestLocationUpdates(
             mLocationRequest,
             {
-            it.longitude
+                it.longitude
             },
             Looper.myLooper()
         )
     }
 
-    private val mLocationCallback: LocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-         locationResult.lastLocation
-
-        }
+    private fun checkPermissions(): Boolean {
+        return ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun checkPermissions(): Boolean {
-        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        }
-
     private fun requestPermissions() {
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION), GEO_PERMISSION_REQUEST_CODE)
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ),
+            GEO_PERMISSION_REQUEST_CODE
+        )
     }
 
     private fun isLocationEnabled(): Boolean {
@@ -177,22 +236,14 @@ class InformationActivity : AppCompatActivity(), RowClickListener {
         )
     }
 
-    override fun onItemClickListener(item: RssItem) {
-        val intent = Intent(this, DetailsActivity::class.java)
-        intent.putExtra("id", item.id)
-        startActivity(intent)
-    }
-
-    override fun onLongClickListener(item: RssItem) {
-        val favourite = item.favourite
-        val uuid = item.id
-        val action = if (!favourite) "add to" else "remove from"
-        MaterialAlertDialogBuilder(this)
-            .setMessage("Do you want $action favourites")
-            .setTitle("Favourites changes")
-            .setCancelable(false)
-            .setPositiveButton("Yes") { _: DialogInterface?, _: Int ->  if(!favourite) rssViewModel.addToFavourites(uuid) else rssViewModel.removeFromFavourites(uuid)}
-            .setNegativeButton("No") { dialog: DialogInterface, _: Int -> dialog.cancel() }
-            .create().show()
+    private fun showNotification() {
+        val notification = NotificationCompat.Builder(applicationContext, "channel_id")
+            .setContentTitle("Rss App")
+            .setContentText("Open app to see new info")
+            .setSmallIcon(R.mipmap.sym_def_app_icon)
+            .build()
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(1, notification)
     }
 }

@@ -8,10 +8,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Html
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.ViewModelProvider
+import pjwstk.s20124.prm_2.R
 import pjwstk.s20124.prm_2.RssApplication
 import pjwstk.s20124.prm_2.databinding.ActivityDetailsBinding
 import pjwstk.s20124.prm_2.model.RssItem
@@ -68,10 +71,29 @@ class DetailsActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        if(item.favourite) {
+            binding.likeButton.setImageResource(R.drawable.ic_baseline_favorite_24)
+        }
+        else{
+            binding.likeButton.setImageResource(R.drawable.ic_baseline_favorite_border_24)
+        }
+
+        binding.likeButton.setOnClickListener {
+            if(item.favourite){
+                rssViewModel.removeFromFavourites(item.id)
+                binding.likeButton.setImageResource(R.drawable.ic_baseline_favorite_border_24)
+                Toast.makeText(this, "Article has been removed from favourites", Toast.LENGTH_LONG).show()
+            }
+            else{
+                rssViewModel.addToFavourites(item.id)
+                binding.likeButton.setImageResource(R.drawable.ic_baseline_favorite_24)
+                Toast.makeText(this, "Article has been added to favourites", Toast.LENGTH_LONG).show()
+            }
+        }
+
         binding.pubDate.text = item.date
         binding.author.text = item.creator
 
         rssViewModel.setAsRead(item.id)
-
     }
 }
