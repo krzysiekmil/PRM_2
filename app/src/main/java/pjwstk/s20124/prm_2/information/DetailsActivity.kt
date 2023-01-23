@@ -95,5 +95,13 @@ class DetailsActivity : AppCompatActivity() {
         binding.author.text = item.creator
 
         rssViewModel.setAsRead(item.id)
+
+        binding.shareButton.setOnClickListener {
+            val intent = Intent()
+            intent.action = Intent.ACTION_SEND
+            intent.putExtra(Intent.EXTRA_TEXT, item.link)
+            intent.type = "text/plain"
+            startActivity(Intent.createChooser(intent, getString(R.string.share)))
+        }
     }
 }
